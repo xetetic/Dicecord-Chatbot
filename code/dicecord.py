@@ -7,12 +7,10 @@ import traceback
 import re
 import sys
 
-from utils.error_logger import send_error_message
 from utils.tokens import saver, token
 from utils import textResponses
 from utils.roller import Roller
 from utils.messaging import SPLATS
-from utils.patreon_helper import get_credits
 import dbhelpers
 
 
@@ -21,11 +19,11 @@ class PoolError(Exception):
         super().__init__()
         self.message = message
 
+
 class DicecordBot:
-    def __init__(self, token, me, dbpath):
+    def __init__(self, token, me):
         self.token = token
         self.me = me
-        self.dbpath = dbpath
 
     def startBot(self):
         self.loop = asyncio.new_event_loop()
@@ -38,7 +36,7 @@ class DicecordBot:
             content += f'\n{self.client.user.name}'
             content += f'\n{self.client.user.id}'
             content += f'\n{datetime.datetime.now()}'
-            send_error_message(content)
+            print(content)
             await self.client.change_presence(activity=discord.Game(name='PM "help" for commands'))
 
         @self.client.event
@@ -59,7 +57,7 @@ class DicecordBot:
         except dbhelpers.db.Error:
             tb = traceback.format_exc()
             self.errorText(message, tb)
-            send_error_message(f'SQL error\n{tb}')
+            print(f'SQL error\n{tb}')
         except:
             tb = traceback.format_exc()
             self.errorText(message, tb)
@@ -100,6 +98,12 @@ class DicecordBot:
         if ' roll ' in command:
             out = self.handle_roll(message, command)
 
+        elif ' gangrel ' in command:
+            out = self.handle_special_roll(message, command)
+
+        elif ' gan ' in command:
+            out = self.handle_special_roll(message, command)
+
         elif ' splat ' in command:
             out = self.set_splat(message)
 
@@ -128,7 +132,7 @@ class DicecordBot:
 
     def format_command(self, message):
         command = message.content.lower()
-        prefix = dbhelpers.get_prefix(message, self.dbpath)
+        prefix = None
         if self.client.user in message.mentions:
             # always reply when @mentioned
             return command
@@ -140,9 +144,10 @@ class DicecordBot:
         """Checks text for type of roll, makes that roll."""
         if 'roll one' in command:
             return Roller.roll_special()
+        if ' gangrel ' in command or ' gan ' in command:
+            return self.handle_special_roll(message, command)
 
-        flavour, splat = dbhelpers.get_flavour(message, self.dbpath)
-        character = {'flavour': flavour, 'splat': splat}
+        character = {'flavour': True, 'splat': 'default'}
         roller = Roller.from_dict(character)
         if "chance" in command:
             results = roller.roll_chance(paradox="paradox" in command)
@@ -152,7 +157,7 @@ class DicecordBot:
         else:
             results = []
             again = self.get_again_amount(command)
-            if 'roll pool' in command:
+            if '+' in command or '-' in command:
                 try:
                     dice_amount, expression = self.get_pool(command)
                     if dice_amount < 1:
@@ -181,6 +186,59 @@ class DicecordBot:
                     again=again,
                     rote="rote" in command,
                     paradox="paradox" in command,
+                    frenzy="frenzy" in command,
+                    sender_nick=message.author.nick
+                )
+                results = '\n'.join(results)
+                return results
+
+    # 10s don't reroll and 1s subtract from successes
+    def handle_special_roll(self, message, command):
+        """Checks text for type of roll, makes that roll."""
+        if 'roll one' in command:
+            return Roller.roll_special()
+
+        character = {'flavour': True, 'splat': 'default'}
+        roller = Roller.from_dict(character)
+        if "chance" in command:
+            results = roller.roll_chance(paradox="paradox" in command)
+            results = '\n'.join(results)
+            return results
+
+        else:
+            results = []
+            again = self.get_again_amount(command)
+            if '+' in command or '-' in command:
+                try:
+                    dice_amount, expression = self.get_pool(command)
+                    if dice_amount < 1:
+                        # roll chance
+                        results = [f'Calculated a pool of `{expression}={dice_amount}` dice - chance roll']
+                        results += roller.roll_chance(paradox="paradox" in command)
+                        results = '\n'.join(results)
+                        return results
+                    else:
+                        results = [f'Calculated a pool of `{expression}={dice_amount}` dice']
+
+                except PoolError as e:
+                    return e.message
+            else:
+                dice_amount = self.getDiceAmount(command)
+
+            if dice_amount is None:
+                # stop if no dice number found
+                return
+
+            if dice_amount >= 50:
+                return "Too many dice. Please roll less than 50."
+            else:
+                results += roller.special_roll_set(
+                    dice_amount,
+                    again=11,
+                    rote="rote" in command,
+                    paradox="paradox" in command,
+                    frenzy="frenzy" in command,
+                    sender_nick=message.author.nick.lower()
                 )
                 results = '\n'.join(results)
                 return results
@@ -232,7 +290,7 @@ class DicecordBot:
                 return int(matched.group())
 
     def get_pool(self, text):
-        regex_1 = r'pool (-?\d{1,2})'
+        regex_1 = r'gan|roll|gangrel| \b(-?\d{1,2})'
         regex_2 = r'([+-] ?\d{1,2})'
         numbers = re.findall(f'{regex_1}', text)
         numbers += re.findall(f'{regex_2}', text)
@@ -249,12 +307,6 @@ class DicecordBot:
         if new_prefix:
             if new_prefix == 'reset':
                 new_prefix = None
-            dbhelpers.set_prefix(
-                new_prefix,
-                message,
-                self.dbpath,
-                server_wide,
-            )
             if server_wide:
                 output = f"Server Prefix changed by [userID] to **{new_prefix}** in server {message.guild}"
             else:
@@ -262,7 +314,7 @@ class DicecordBot:
             return output
 
     def check_prefix(self, message):
-        prefix = dbhelpers.get_prefix(message, self.dbpath)
+        prefix = None
         if prefix:
             output = f'Current prefix for this channel is `{prefix}`'
         else:
@@ -286,13 +338,12 @@ class DicecordBot:
         else:
             new_splat = self.find_splat(message.content.lower())
             if new_splat:
-                dbhelpers.set_splat(message, new_splat, self.dbpath)
                 return f'Flavour for [userID] changed to {new_splat} in server {message.guild} - #{message.channel}'
             else:
                 return 'Unsupported splat selected. Only mage supported at this time.'
 
     def check_splat(self, message):
-        _, splat = dbhelpers.get_flavour(message, self.dbpath)
+        splat = 'default'
         if splat:
             return f"Splat for [userID] is currently set to {splat} in server {message.guild} - #{message.channel}"
         else:
@@ -307,18 +358,16 @@ class DicecordBot:
         """Allows user to set existence of flavour text."""
         setting = message.content.lower()
         if 'off' in setting:
-            dbhelpers.set_flavour(message, 'off', self.dbpath)
             return f"Flavour turned off in server {str(message.guild)} - {str(message.channel)}"
 
         elif 'on' in setting:
-            dbhelpers.set_flavour(message, 'on', self.dbpath)
             return f"Flavour turned on in server {str(message.guild)} - {str(message.channel)}"
 
         elif 'check' in setting:
             return self.check_flavour(message)
 
     def check_flavour(self, message):
-        flavour, _ = dbhelpers.get_flavour(message, self.dbpath)
+        flavour, _ = False
         if flavour:
             return f"Flavour turned on in server {str(message.guild)} - {str(message.channel)}"
         else:
@@ -340,7 +389,6 @@ class DicecordBot:
         else:
             return
 
-        dbhelpers.delete_content(message, scope, self.dbpath)
         return output
 
     def errorText(self, message, error):
@@ -349,9 +397,9 @@ Message: {message.clean_content}
 Server: {message.guild}
 Channel: {message.channel}
 Author: {message.author}
-Error: 
+Error:
 {error}'''
-        send_error_message(content)
+        print(content)
 
     async def pmCommands(self, message):
         command = message.content.lower()
@@ -367,9 +415,6 @@ Error:
 
         elif 'info' in command:
             content = textResponses.aboutText
-            patrons = get_credits()
-            if patrons:
-                content += f'\n\n**Special thanks to our Patreon patrons**\n```\n{patrons}\n```'
 
         elif 'prefix' in command:
             content = textResponses.prefixHelp
@@ -380,17 +425,17 @@ Error:
         await self.send(content, message)
 
 
-def runner(token, me, dbpath):
+def runner(token, me):
     """Helper function to run. Handles connection reset errors by automatically running again."""
     bot = None
     while True:
         try:
-            bot = DicecordBot(token, me, dbpath)
+            bot = DicecordBot(token, me)
             bot.startBot()
             bot.client.run(bot.token)
         except:
             tb = traceback.format_exc()
-            send_error_message(f'Potential disconnect\n\n{tb}')
+            print(f'Potential disconnect\n\n{tb}')
             if bot:
                 bot.loop.close()
             checkConnection()
@@ -406,16 +451,10 @@ def checkConnection(host='8.8.8.8', port=53, timeout=53):
             socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
             break
         except:
-            send_error_message(f"No Connection still at {datetime.datetime.now()}")
+            print(f"No Connection still at {datetime.datetime.now()}")
             time.sleep(300)
-    send_error_message("Reconnected")
+    print("Reconnected")
 
 
 if __name__ == '__main__':
-    dbpath = sys.argv[1]
-    try:
-        dbhelpers.create_tables(dbpath)
-    except dbhelpers.db.OperationalError:
-        # table already exists
-        pass
-    runner(token, saver, dbpath)
+    runner(token, saver)
