@@ -116,7 +116,7 @@ class Roller:
 
         # check for positive or negative message
         if dice <= 1:
-            if successes == 1:
+            if successes >= 1:
                 messages.append(self.bot_message("good", sender_nick))
         elif dice > 1 and self.flavour and not paradox:
             if successes == 0:
