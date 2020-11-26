@@ -50,7 +50,8 @@ jackDefault = ["This is why Armand could never *really* care, [userID].",
                "Don't stain the carpet, [userID]!",
                "Do you need a new shirt, [userID]?",
                "Time to get the tarp, [userID].",
-               "Don't make me shoot you in the head with your own gun again, [userID]."]
+               "Don't make me shoot you in the head with your own gun again, [userID].",
+               "You should just run away, [userID]. It's all you're good for."]
 
 teddieDefault = ["Go jump in a lake, [userID].",
                  "Bless your heart, [userID].",
