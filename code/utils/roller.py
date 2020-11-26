@@ -115,7 +115,10 @@ class Roller:
         messages.append(out)
 
         # check for positive or negative message
-        if self.flavour and not paradox:
+        if dice <= 1:
+            if successes == 1:
+                messages.append(self.bot_message("good", sender_nick))
+        elif self.flavour and not paradox:
             if successes == 0:
                 if frenzy:
                     messages.append(self.bot_message("frenzy", sender_nick))
