@@ -226,7 +226,7 @@ class Roller:
             sender_specific_msgs.extend(self.natalieMessages)
             sender_specific_good_msgs.extend(messaging.natGood.copy())
         if "teddie" in sender:
-            sender_specific_msgs.extend(self.eddieMessages)
+            sender_specific_msgs.extend(self.teddieMessages)
             sender_specific_good_msgs.extend(messaging.tedGood.copy())
         if "jack" in sender:
             sender_specific_msgs.extend(self.jackMessages)
