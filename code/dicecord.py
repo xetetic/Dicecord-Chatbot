@@ -187,7 +187,7 @@ class DicecordBot:
                     rote="rote" in command,
                     paradox="paradox" in command,
                     frenzy="frenzy" in command,
-                    sender_nick=message.author.nick
+                    sender_nick=message.author.nick.lower()
                 )
                 results = '\n'.join(results)
                 return results
