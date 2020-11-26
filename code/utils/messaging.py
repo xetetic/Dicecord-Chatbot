@@ -67,7 +67,7 @@ jackGood = ["Ami would be proud, [userID]!",
 
 natGood = ["Matilda would be proud, [userID]!",
            "That's the girl David loves: [uesrID]!",
-           "You may not remeber your past, but nobody is *ever* going to forget how awesome you are, [userID].",
+           "You may not remember your past, but nobody is *ever* going to forget how awesome you are, [userID].",
            "You wanted chicken, you wanted liver, and Meow Mix? Meow Mix has delivered, [userID]!"]
 
 tedGood = ["You're so good, you hacked reality, [userID].",
