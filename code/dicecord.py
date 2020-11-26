@@ -160,6 +160,7 @@ class DicecordBot:
             if '+' in command or '-' in command:
                 try:
                     dice_amount, expression = self.get_pool(command)
+                    print(dice_amount)
                     if dice_amount <= 1:
                         # roll chance
                         results = [f'Calculated a pool of `{expression}={dice_amount}` dice - chance roll']
@@ -181,13 +182,17 @@ class DicecordBot:
             if dice_amount >= 50:
                 return "Too many dice. Please roll less than 50."
             else:
+                if not message.author.nick:
+                    sender_nick = ""
+                else:
+                    sender_nick = message.author.nick.lower()
                 results += roller.roll_set(
                     dice_amount,
                     again=again,
                     rote="rote" in command,
                     paradox="paradox" in command,
                     frenzy="frenzy" in command,
-                    sender_nick=message.author.nick.lower()
+                    sender_nick=sender_nick
                 )
                 results = '\n'.join(results)
                 return results
@@ -232,13 +237,17 @@ class DicecordBot:
             if dice_amount >= 50:
                 return "Too many dice. Please roll less than 50."
             else:
+                if not message.author.nick:
+                    sender_nick = ""
+                else:
+                    sender_nick = message.author.nick.lower()
                 results += roller.special_roll_set(
                     dice_amount,
                     again=11,
                     rote="rote" in command,
                     paradox="paradox" in command,
                     frenzy="frenzy" in command,
-                    sender_nick=message.author.nick.lower()
+                    sender_nick=sender_nick
                 )
                 results = '\n'.join(results)
                 return results
