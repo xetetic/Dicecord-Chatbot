@@ -81,7 +81,7 @@ class Roller:
 
         for die in range(0, dice):
             # roll each die
-            result = self.roll_die(again)
+            result = self.roll_die(again, one_die=dice==1)
             if result == 0:
                 # if not a success adds entry to fail list for rote reroll
                 fails += ["fail"]
@@ -90,7 +90,7 @@ class Roller:
 
         if rote:
             for die in fails:
-                successes += self.roll_die(again, rote_reroll=True)
+                successes += self.roll_die(again, rote_reroll=True, one_die=dice==1)
 
         messages = []
 
@@ -240,7 +240,7 @@ class Roller:
 
         return out
 
-    def roll_die(self, again=10, explode_reroll=False, rote_reroll=False):
+    def roll_die(self, again=10, explode_reroll=False, rote_reroll=False, one_die=False):
         """
         Rolls a single die, calculates number of successes and updates self.rolls
         Args:
@@ -267,6 +267,11 @@ class Roller:
         if value >= again:
             # Exploding!
             return 1 + self.roll_die(again, True, rote_reroll)
+        elif one_die:
+            if value == 10:
+                return 1
+            else:
+                return 0
         elif value >= 8:
             return 1
         else:
