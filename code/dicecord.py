@@ -160,7 +160,7 @@ class DicecordBot:
             if '+' in command or '-' in command:
                 try:
                     dice_amount, expression = self.get_pool(command)
-                    if dice_amount < 1:
+                    if dice_amount <= 1:
                         # roll chance
                         results = [f'Calculated a pool of `{expression}={dice_amount}` dice - chance roll']
                         results += roller.roll_chance(paradox="paradox" in command)
@@ -211,7 +211,7 @@ class DicecordBot:
             if '+' in command or '-' in command:
                 try:
                     dice_amount, expression = self.get_pool(command)
-                    if dice_amount < 1:
+                    if dice_amount <= 1:
                         # roll chance
                         results = [f'Calculated a pool of `{expression}={dice_amount}` dice - chance roll']
                         results += roller.roll_chance(paradox="paradox" in command)
